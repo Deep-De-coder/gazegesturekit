@@ -1,0 +1,12 @@
+# Gaze + hand fusion rules
+window_ms: 300
+min_fixation_ms: 250
+rules:
+  - when: "gaze.on_screen and hand.gesture == 'pinch'"
+    do:   {"type": "select"}
+  - when: "gaze.fixation_ms >= 600 and eye.blink == 'single'"
+    do:   {"type": "click"}
+  - when: "hand.gesture == 'palm'"
+    do:   {"type": "cancel"}
+  - when: "hand.gesture == 'point' and gaze.dx > 300"
+    do:   {"type": "scroll", "direction": "auto"}

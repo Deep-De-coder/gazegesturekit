@@ -1,3 +1,25 @@
+Metadata-Version: 2.4
+Name: gazegesturekit
+Version: 0.1.0
+Summary: Gaze + hand gesture fusion SDK for touch-free interactions
+Author: GazeGestureKit
+License: Apache-2.0
+Project-URL: homepage, https://example.com/gazegesturekit
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: mediapipe>=0.10.14
+Requires-Dist: opencv-python>=4.9.0
+Requires-Dist: numpy>=1.26
+Requires-Dist: typer[all]>=0.12.4
+Requires-Dist: pydantic>=2.7
+Requires-Dist: websockets>=12.0
+Requires-Dist: pyautogui>=0.9.54
+Requires-Dist: rich>=13.7
+Requires-Dist: fastapi>=0.111.0
+Requires-Dist: uvicorn>=0.30.0
+Dynamic: license-file
+
 # GazeGestureKit — Look to aim. Pinch to confirm.
 
 GazeGestureKit turns a standard webcam into a touch-free interface by fusing **eye gaze** and **hand gestures** into high-level intent events (select, click, drag, scroll, cancel). After a quick 5-point calibration, the SDK estimates on-screen gaze, detects blinks/winks, recognizes gestures (pinch, point, palm, fist), and fuses them over a short time window to emit stable, low-latency actions—entirely on-device for privacy.
