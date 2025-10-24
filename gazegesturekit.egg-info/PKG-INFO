@@ -18,6 +18,9 @@ Requires-Dist: pyautogui>=0.9.54
 Requires-Dist: rich>=13.7
 Requires-Dist: fastapi>=0.111.0
 Requires-Dist: uvicorn>=0.30.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: PySide6>=6.5.0
+Requires-Dist: qdarkstyle>=3.0.0
 Dynamic: license-file
 
 # GazeGestureKit — Look to aim. Pinch to confirm.

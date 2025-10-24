@@ -69,6 +69,14 @@ def demo(action: str = typer.Argument("mouse"), camera:Optional[int]=0, width:in
         move_and_click(x,y, act)
 
 @app.command()
+def gui():
+    """
+    Launch the GazeGestureKit GUI application.
+    """
+    from gazegesturekit.gui.app import main as gui_main
+    gui_main()
+
+@app.command()
 def run(rules: str = typer.Option("examples/rules.yaml"), ws: Optional[str]=typer.Option(None), camera:Optional[int]=0, width:int=1280, height:int=720, calibration:str=".ggk_calibration.json"):
     """
     Run fusion engine and print JSONL events; optionally broadcast over WebSocket.

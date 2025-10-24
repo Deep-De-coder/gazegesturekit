@@ -24,6 +24,8 @@ gazegesturekit/filters/adaptive_one_euro.py
 gazegesturekit/filters/one_euro.py
 gazegesturekit/fuse/rules.py
 gazegesturekit/fuse/state.py
+gazegesturekit/gui/__init__.py
+gazegesturekit/gui/app.py
 gazegesturekit/hand/gestures.py
 gazegesturekit/hand/gestures_extra.py
 gazegesturekit/hand/landmarks.py
