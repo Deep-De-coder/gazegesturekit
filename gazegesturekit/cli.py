@@ -12,6 +12,7 @@ from .fuse.rules import load_rules, RuleEngine
 from .runtime.events import Event, Gaze, Hand, ws_broadcast
 from .demos.mouse import move_and_click
 from .fuse.state import FusionSM
+from .eye.camera_model import load_intrinsics, pixel_to_camera_ray
 
 app = typer.Typer(add_completion=False, help="GazeGestureKit CLI (ggk)")
 
@@ -21,14 +22,22 @@ def calibrate(points:int=typer.Option(5), camera:Optional[int]=0, width:int=1280
     Show invisible targets and record raw gaze to learn a polynomial mapping to screen coords.
     """
     est = GazeEstimator(screen=(width,height))
-    def get_raw():
+    def get_feature():
         for f in frames(camera, width, height):
             res = est(f["image"])
             if res is None: continue
-            gx,gy = res["screen_xy"]
-            # Back to 0..1 approximation for calibration; normalize
-            return (gx/width, gy/height)
-    params = Calibrator(points=points, save_path=save).run(get_raw_gaze=get_raw, screen_size=(width,height))
+            # recompute feature from pixel using intrinsics
+            img = f["image"]; h,w = img.shape[:2]
+            K = load_intrinsics(None, w, h)
+            x,y = res["screen_xy"]
+            # invert approx: use current pixel as (u,v)
+            # better: recompute from pupils; but for wizard simplicity we use the
+            # current raw normalized coords as feature proxy:
+            u,v = x, y
+            ray = pixel_to_camera_ray(u, v, K.Kinv)
+            fx,fy = float(ray[0]/max(1e-6,ray[2])), float(ray[1]/max(1e-6,ray[2]))
+            return (fx,fy)
+    params = Calibrator(points=points, save_path=save, mapping_type="tps").run(get_feature_xy=get_feature, screen_size=(width,height))
     print("[green]Saved calibration[/green]", save, "=>", params.keys())
 
 @app.command()
@@ -119,7 +128,10 @@ def run(rules: str = typer.Option("examples/rules.yaml"), ws: Optional[str]=type
                 
                 # Update drift bias on positive events
                 if ev["type"] in ("select","click","double_click"):
-                    est.apply_click_bias(target_xy=(gaze["x"], gaze["y"]), observed_xy=(gaze["x"], gaze["y"]))
+                    # EMA drift: small nudge towards the observed click point (here we use the current gaze point)
+                    alpha = 0.02
+                    target = np.array([gaze["x"], gaze["y"]], dtype=float)
+                    est.bias = (1-alpha)*est.bias + alpha*(target - target*0.0)  # simple placeholder; refine with UI target if available
                     
             # press q to quit
             if cv2.waitKey(1) & 0xFF == ord('q'):

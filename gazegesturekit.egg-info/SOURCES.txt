@@ -9,13 +9,18 @@ gazegesturekit.egg-info/dependency_links.txt
 gazegesturekit.egg-info/entry_points.txt
 gazegesturekit.egg-info/requires.txt
 gazegesturekit.egg-info/top_level.txt
+gazegesturekit/calibrate/tps.py
 gazegesturekit/calibrate/wizard.py
 gazegesturekit/demos/mouse.py
 gazegesturekit/eye/blink.py
+gazegesturekit/eye/camera_model.py
+gazegesturekit/eye/fixation.py
 gazegesturekit/eye/gaze.py
 gazegesturekit/eye/headpose.py
 gazegesturekit/eye/landmarks.py
+gazegesturekit/eye/pupil.py
 gazegesturekit/eye/saccade.py
+gazegesturekit/filters/adaptive_one_euro.py
 gazegesturekit/filters/one_euro.py
 gazegesturekit/fuse/rules.py
 gazegesturekit/fuse/state.py
@@ -27,5 +32,7 @@ gazegesturekit/runtime/events.py
 tests/test_gestures.py
 tests/test_gestures_extra.py
 tests/test_one_euro.py
+tests/test_pupil.py
 tests/test_rules.py
 tests/test_saccade.py
+tests/test_tps.py

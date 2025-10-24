@@ -14,3 +14,4 @@ rules:
     do:   {"type": "cancel"}
   - when: "hand.gesture == 'point' and gaze.dx > 300"
     do:   {"type": "scroll", "direction": "auto"}
+# Note: calibration now stores TPS models and camera intrinsics if provided.
