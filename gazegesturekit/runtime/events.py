@@ -13,7 +13,7 @@ class Hand(BaseModel):
 
 class Event(BaseModel):
     ts: float = Field(default_factory=lambda: time.time())
-    type: Literal["select","click","drag","scroll","cancel","debug"]
+    type: Literal["select","click","drag","scroll","cancel","debug","hover_start","hover_end","double_click","zoom"]
     gaze: Optional[Gaze]=None
     hand: Optional[Hand]=None
     extra: Dict[str,Any] = {}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 import typer, json, asyncio, cv2, sys
+import numpy as np
 from rich import print
 from pathlib import Path
 from typing import Optional
@@ -87,6 +88,7 @@ def run(rules: str = typer.Option("examples/rules.yaml"), ws: Optional[str]=type
     last_zoom_dist = None
 
     async def producer():
+        nonlocal stride, prev_t, last_zoom_dist
         i = 0
         for f in frames(camera, width, height):
             i += 1
