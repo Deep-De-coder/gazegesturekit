@@ -1,5 +1,6 @@
 from __future__ import annotations
 import numpy as np
+from .gestures_extra import fist as _fist, thumbs_up as _thumbs_up
 
 THUMB_TIP=4; INDEX_TIP=8; MIDDLE_TIP=12; RING_TIP=16; PINKY_TIP=20; WRIST=0
 
@@ -22,9 +23,19 @@ def pointing(pts, curl_thr=0.04):
     ring= np.linalg.norm(pts[RING_TIP,:2]-wrist)
     return (idx > mid+curl_thr and idx > ring+curl_thr), 0.7
 
-def classify(hand):
+_last_emit = {"gesture": None, "t": 0.0}
+
+def classify(hand, decay_ms: int = 300):
+    import time
     pts=hand["pts"]; handed=hand["handedness"]
-    for fn, name in [(pinch,"pinch"), (palm_open,"palm"), (pointing,"point")]:
+    # ordered by ease
+    for fn, name in [(pinch,"pinch"), (palm_open,"palm"), (pointing,"point"), (_fist,"fist"), (_thumbs_up,"thumbs_up")]:
         ok,conf = fn(pts)
-        if ok: return {"gesture":name, "conf":conf, "handedness":handed}
+        if ok:
+            now=time.time()
+            g = _last_emit.get("gesture")
+            if g == name and (now - _last_emit["t"])*1000 < decay_ms:
+                conf = max(conf*0.8, 0.5)  # decay if repeating too fast
+            _last_emit.update({"gesture": name, "t": now})
+            return {"gesture":name, "conf":conf, "handedness":handed}
     return {"gesture":None, "conf":0.0, "handedness":handed}

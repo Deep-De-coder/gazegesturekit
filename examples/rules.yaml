@@ -1,7 +1,11 @@
 # Gaze + hand fusion rules
 window_ms: 300
-min_fixation_ms: 250
+# Performance hints (used by CLI adaptively)
+perf:
+  adaptive_stride: true
+  roi_hands: true   # (future: crop hand inference around last gaze)
 rules:
+  # State machine handles priority; rules kept for compatibility/documentation
   - when: "gaze.on_screen and hand.gesture == 'pinch'"
     do:   {"type": "select"}
   - when: "gaze.fixation_ms >= 600 and eye.blink == 'single'"

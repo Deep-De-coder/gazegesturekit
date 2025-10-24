@@ -11,6 +11,7 @@ from .hand.gestures import classify
 from .fuse.rules import load_rules, RuleEngine
 from .runtime.events import Event, Gaze, Hand, ws_broadcast
 from .demos.mouse import move_and_click
+from .fuse.state import FusionSM
 
 app = typer.Typer(add_completion=False, help="GazeGestureKit CLI (ggk)")
 
@@ -72,8 +73,24 @@ def run(rules: str = typer.Option("examples/rules.yaml"), ws: Optional[str]=type
 
     queue: "asyncio.Queue[str]" = asyncio.Queue()
 
+    stride = 1
+    prev_t = time.time()
+    last_zoom_dist = None
+
     async def producer():
+        i = 0
         for f in frames(camera, width, height):
+            i += 1
+            if stride>1 and (i % stride)!=0:
+                continue
+                
+            # Adaptive stride: if loop > 50 ms, increase stride (skip frames) up to 3
+            now = time.time()
+            loop_ms = (now - prev_t)*1000
+            prev_t = now
+            if loop_ms > 50 and stride < 3: stride += 1
+            elif loop_ms < 30 and stride > 1: stride -= 1
+            
             res = est(f["image"])
             hs = hands(f["image"])
             hand = classify(hs[0]) if hs else {"gesture":None,"conf":0.0,"handedness":None}
@@ -84,11 +101,26 @@ def run(rules: str = typer.Option("examples/rules.yaml"), ws: Optional[str]=type
                     "fixation_ms": res["fixation_ms"], "dx": res["dx"], "dy": res["dy"]
                 }
                 events = eng.update(gaze=gaze, hand=hand)
+                
+                # Two-hand zoom (if two hands present)
+                if hs and len(hs) >= 2:
+                    from .hand.gestures_extra import twohand_zoom
+                    is_zoom, scale, last_zoom_dist = twohand_zoom(hs[0]["pts"], hs[1]["pts"], last_zoom_dist)
+                    if is_zoom:
+                        ev = {"type":"zoom","scale":scale}
+                        e = Event(type="debug").model_copy(update={"gaze":gaze, "hand":hand, "extra":ev})
+                        line = e.model_dump_json(); print(line)
+                        
             for ev in events:
                 e = Event(type=ev["type"]).model_copy(update={"gaze":gaze, "hand":hand})
                 line = e.model_dump_json()
                 print(line)
                 if ws: await queue.put(line)
+                
+                # Update drift bias on positive events
+                if ev["type"] in ("select","click","double_click"):
+                    est.apply_click_bias(target_xy=(gaze["x"], gaze["y"]), observed_xy=(gaze["x"], gaze["y"]))
+                    
             # press q to quit
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
