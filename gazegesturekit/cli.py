@@ -131,7 +131,10 @@ def run(rules: str = typer.Option("examples/rules.yaml"), ws: Optional[str]=type
                         line = e.model_dump_json(); print(line)
                         
             for ev in events:
-                e = Event(type=ev["type"]).model_copy(update={"gaze":gaze, "hand":hand})
+                # Include extra data (like drag action, start_pos, delta)
+                extra = ev.get("extra", {})
+                
+                e = Event(type=ev["type"]).model_copy(update={"gaze":gaze, "hand":hand, "extra":extra})
                 line = e.model_dump_json()
                 print(line)
                 if ws: await queue.put(line)

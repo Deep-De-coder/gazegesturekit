@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QThread, Signal, QTimer, Qt
 from PySide6.QtGui import QImage, QPixmap, QPainter, QPen, QColor
 import qdarkstyle
+import pyautogui
 
 from ..eye.gaze import GazeEstimator
 from ..hand.landmarks import HandLandmarks
@@ -128,6 +129,9 @@ class GazeWorker(QThread):
                     events = self.rule_engine.update(gaze=gaze_dict, hand=hand_data)
                     if events:
                         event = events[0]  # Take first event
+                        # Ensure extra field exists (should already be set by FusionSM)
+                        if "extra" not in event:
+                            event["extra"] = {}
                 
                 # Emit frame and data
                 self.frame_ready.emit(frame, gaze_result or {}, event)
@@ -341,23 +345,82 @@ class GazeGestureGUI(QMainWindow):
             # Run calibration
             camera_index = self.camera_combo.currentIndex()
             
+            # Initialize GazeEstimator for feature extraction (without calibration)
+            from ..eye.gaze import GazeEstimator
+            estimator = GazeEstimator(calibration=None, screen=(1280, 720))
+            
+            # Initialize camera
+            cap = cv2.VideoCapture(camera_index)
+            if not cap.isOpened():
+                raise Exception(f"Failed to open camera {camera_index}")
+            
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            
             def get_feature():
-                cap = cv2.VideoCapture(camera_index)
-                if not cap.isOpened():
-                    return None
-                
+                """Extract raw gaze feature from current frame."""
                 ret, frame = cap.read()
-                cap.release()
-                
                 if not ret:
                     return None
                 
-                # Simple feature extraction (normalized coordinates)
-                h, w = frame.shape[:2]
-                return (w//2, h//2)  # Center point as feature
+                # Extract raw feature using GazeEstimator
+                feat = estimator.get_raw_feature(frame)
+                return feat
             
-            calibrator = Calibrator(points=5, save_path=self.calibration_path)
-            calibrator.run(get_feature, screen_size=(1280, 720))
+            # Get screen size (use primary screen for now)
+            screen_w, screen_h = pyautogui.size()
+            
+            calibrator = Calibrator(points=5, save_path=self.calibration_path, mapping_type="tps")
+            
+            # Show calibration targets and collect samples
+            self.log_event("Starting calibration - please look at the targets")
+            
+            # Collect calibration data with visual targets
+            targets = calibrator._targets(screen_w, screen_h)
+            samples_collected = 0
+            
+            for target_idx, (tx, ty) in enumerate(targets):
+                self.log_event(f"Target {target_idx + 1}/{len(targets)}: ({tx}, {ty})")
+                
+                # Show target on screen
+                try:
+                    # Draw a target on screen using pyautogui
+                    # Note: This is a simple approach - could be enhanced with a proper overlay
+                    pass  # Targets will be shown by calibrator or we can enhance this
+                except:
+                    pass
+                
+                # Collect samples for this target
+                for sample_idx in range(20):
+                    raw = get_feature()
+                    if raw is not None:
+                        fx, fy = raw
+                        calibrator.samples.append((fx, fy, tx, ty))
+                        samples_collected += 1
+                    time.sleep(0.02)
+                    
+                    # Process GUI events to keep it responsive
+                    QApplication.processEvents()
+            
+            # Fit the calibration model
+            mapping = calibrator.fit()
+            params = {
+                "screen": {"id": calibrator.screen_id, "w": screen_w, "h": screen_h}, 
+                "mapping": mapping
+            }
+            
+            # Save calibration
+            cfg = {}
+            if Path(self.calibration_path).exists():
+                try:
+                    cfg = json.loads(Path(self.calibration_path).read_text())
+                except:
+                    cfg = {}
+            cfg[calibrator.screen_id] = params
+            Path(self.calibration_path).write_text(json.dumps(cfg, indent=2))
+            
+            self.log_event(f"Calibration complete - collected {samples_collected} samples")
+            cap.release()
             
             self.log_event("Calibration completed successfully")
             
@@ -367,6 +430,8 @@ class GazeGestureGUI(QMainWindow):
         except Exception as e:
             self.log_event(f"Calibration failed: {str(e)}")
             QMessageBox.critical(self, "Calibration Error", f"Calibration failed: {str(e)}")
+            if 'cap' in locals():
+                cap.release()
     
     def toggle_mouse_control(self, enabled: bool):
         """Toggle mouse control on/off."""
@@ -392,15 +457,24 @@ class GazeGestureGUI(QMainWindow):
     def handle_mouse_control(self, event: dict, gaze: dict):
         """Handle mouse control based on events."""
         try:
-            if event["type"] in ["select", "click", "double_click"]:
-                x, y = gaze["screen_xy"]
-                pyautogui.moveTo(x, y)
+            from ..demos.mouse import move_and_click
+            
+            x, y = gaze["screen_xy"]
+            event_type = event.get("type")
+            event_extra = event.get("extra", {})
+            
+            if event_type == "drag":
+                # Handle drag events
+                move_and_click(x, y, action=None, event_extra=event_extra)
+            elif event_type in ["select", "click", "double_click"]:
+                action = "click" if event_type in ["click", "double_click"] else None
+                move_and_click(x, y, action=action)
                 
-                if event["type"] in ["click", "double_click"]:
-                    pyautogui.click()
-                    
-                if event["type"] == "double_click":
+                if event_type == "double_click":
                     pyautogui.click()  # Second click for double-click
+            else:
+                # Just move cursor for other events
+                move_and_click(x, y, action=None)
                     
         except Exception as e:
             self.log_event(f"Mouse control error: {str(e)}")

@@ -16,7 +16,7 @@ class Event(BaseModel):
     type: Literal["select","click","drag","scroll","cancel","debug","hover_start","hover_end","double_click","zoom"]
     gaze: Optional[Gaze]=None
     hand: Optional[Hand]=None
-    extra: Dict[str,Any] = {}
+    extra: Dict[str,Any] = {}  # Can contain "action", "start_pos", "delta" for drag events
 
 async def ws_broadcast(queue: "asyncio.Queue[str]", host="0.0.0.0", port=8765):
     clients=set()

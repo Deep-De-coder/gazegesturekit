@@ -47,6 +47,41 @@ class GazeEstimator:
             return meta["w"], meta["h"]
         return self.screen
 
+    def get_raw_feature(self, frame_bgr):
+        """
+        Extract raw gaze feature coordinates (ray_x, ray_y) before calibration mapping.
+        Returns (fx, fy) or None if face/pupils not detected.
+        """
+        h0,w0 = frame_bgr.shape[:2]
+        self._ensure_intrinsics(w0, h0)
+
+        faces = self.faces(frame_bgr)
+        if not faces: return None
+        face = faces[min(self.lock_idx, len(faces)-1)] if self.face_lock else faces[0]
+        pts = face["pts"]
+
+        # Eye ROIs and pupil centers
+        left_roi, (lx0,ly0,lcx,lcy) = _roi_from_landmarks(frame_bgr, pts, LEFT_EYE_IDX)
+        right_roi,(rx0,ry0,rcx,rcy) = _roi_from_landmarks(frame_bgr, pts, RIGHT_EYE_IDX)
+
+        lp, lc = estimate_pupil_center(left_roi, None)
+        rp, rc = estimate_pupil_center(right_roi, None)
+
+        if lp is None or rp is None:
+            return None
+
+        # Convert local pupil coords to image pixel coords
+        lux, luy = lx0 + lp[0], ly0 + lp[1]
+        rux, ruy = rx0 + rp[0], ry0 + rp[1]
+        u = float((lux + rux) / 2.0); v = float((luy + ruy) / 2.0)
+
+        # Ray in camera coords
+        ray = pixel_to_camera_ray(u, v, self._Kinv)
+
+        # Feature space for calibration: take (x/z, y/z) from ray direction
+        feat_xy = (float(ray[0]/max(1e-6,ray[2])), float(ray[1]/max(1e-6,ray[2])))
+        return feat_xy
+
     def _map_feature_to_screen(self, feat_xy):
         # feat_xy := (ray_x, ray_y)
         if isinstance(self.cal, dict) and self._screen_id in self.cal:
