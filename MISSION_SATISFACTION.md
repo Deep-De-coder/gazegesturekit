@@ -307,5 +307,34 @@ for ev in events:
 
 ---
 
+## 🚀 Additional Features & Enhancements
+
+Beyond the core mission, GazeGestureKit includes several advanced features:
+
+### Performance Optimizations
+- **Adaptive Filtering**: One-Euro filter reduces jitter in gaze tracking
+- **Frame Skipping**: Configurable stride for performance tuning
+- **Efficient Processing**: Optimized MediaPipe pipelines for real-time performance
+
+### Developer Experience
+- **CLI Tools**: Comprehensive command-line interface for all operations
+- **GUI Application**: User-friendly graphical interface for non-technical users
+- **Rule Engine**: YAML-based configuration for custom event mappings
+- **WebSocket Support**: Real-time event broadcasting for web applications
+
+### Extensibility
+- **Modular Architecture**: Clean separation of concerns (eye, hand, fuse, runtime)
+- **Plugin System**: Easy to extend with custom gesture recognizers
+- **Event System**: Structured event model with Pydantic validation
+- **API Design**: Programmatic access to all core components
+
+### Quality & Reliability
+- **Error Handling**: Graceful degradation when components fail
+- **Calibration Persistence**: Save and reload calibration data
+- **Logging**: Comprehensive logging for debugging and analysis
+- **Testing**: Unit tests for core components
+
+---
+
 *Last updated: 2025*
 
